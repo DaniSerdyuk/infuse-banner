@@ -1,0 +1,60 @@
+version: '3.9'
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  mysql:
+    driver: local
+
+services:
+  app:
+    container_name: php
+    entrypoint: ["php", "-S", "0.0.0.0:80"]
+    build:
+      context: $PWD
+      dockerfile: docker/app.dockerfile
+      args:
+        user: ${DEFAULT_USER:-admin}
+        gid: ${DEFAULT_GROUP:-1000}
+        uid: ${DEFAULT_USER_ID:-1000}
+    restart: always
+    ports:
+      - 9000:9000
+      - 80:80
+    depends_on:
+      - mysql
+    volumes:
+      - $PWD/:/var/www/app/
+    networks:
+      - app
+
+  mysql:
+    image: mysql:8.0.23
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+    volumes:
+      - mysql:/var/lib/mysql:delegated
+    ports:
+      - ${DB_PORT:-3306}:${DB_PORT:-3306}
+    networks:
+      - app
+
+  adminer:
+    image: adminer
+    restart: always
+    container_name: adminer
+    environment:
+      - ADMINER_DESIGN=dracula
+    ports:
+      - 8080:8080
+    depends_on:
+      - mysql
+    networks:
+      - app
